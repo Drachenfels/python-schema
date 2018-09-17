@@ -1,0 +1,2 @@
+# python-schema
+Agnostic schema (yes, another one) that was inspired by following libs: JSON Schema, marshmallow, WTForms, schema (https://pypi.org/project/schema/). Primary goal is simplicity, python-schema talks only dictionaries, does not understand methods, built-in validation is rudimentary (however extendable), while it supports various nesting and full customisation of which field is required and which is not.
