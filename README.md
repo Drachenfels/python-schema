@@ -2,7 +2,8 @@
 
 ## Intro:
 
-Agnostic schema that was inspired by many other schemas (yes, another one). What makes it different? Simple AND easy.
+Agnostic schema that was inspired by many other schemas (yes, another one).
+What makes it different? Simple AND easy.
 
 ## Tour among others:
 
@@ -14,22 +15,23 @@ Pros:
 
 Cons:
 
-    - due to simplicity it escalates quickly towards hard to comprehend structures
+    - due too simplicity it escalates quickly towards hard to comprehend
+      structures
     - not obvious to override functionality
-    - if we have classes why not to use them? 
+    - if python has classes why not to use them?
 
 Marshmallow (https://marshmallow.readthedocs.io/en/3.0/)
 
 Pros:
 
     - capable
-    - easy to read (up certain point)
+    - easy to read (up to certain point)
 
 Cons:
 
     - pre-processing, post-processing, methods
     - integration with orms
-    - not obvious how to override functionality
+    - metaclasses
 
 JSON Schema (https://json-schema.org/)
 
@@ -42,7 +44,8 @@ Cons:
 
     - python implementations are not feature complete
     - complex validation not yet supported (as of 2018-04-01)
-
+    - issue with inheritenace and marking field as required (or not) (as of
+      2018-04-01)
 
 WTForms (https://wtforms.readthedocs.io/en/stable/)
 
@@ -57,35 +60,53 @@ Cons:
 
 ## What is python-schema then:
 
-Above but trimmed down. 
+Above but trimmed down to essentials.
 
-You can define:
+You have:
 
     - schema
-    - required fields
+    - required fields (which support inheritance and complex tree structures)
     - validation (rudimentary, but extendable)
-    - class 
-    - you give it and get back dictionaries
+    - it accepts only dictionaries on entry
+    - but outputs python code or json code
+    - if in doubt, override!
 
-You cannot:
+You do not have:
 
-    - built-in decorators
-    - talk non-dictionaries 
-    - define methods that will do something
-    - expect that whatever you write will be interpreted by anything
+    - decorators
+    - non-dictionaries
+    - magic methods that will do something
+    - integration with anything
+    - bloat
+
+## Premise
+
+    I. Each schema is a Field that may or may not have more fields.
+
+    II. Each field behaves same way, that is:
+
+        a. normalisation
+
+        b. validation
+
+        c. ready-to-use
+
+    III. Schema loads data using context (whatever it is for you) and dumps
+        data using context (again whatever it could be for you)
+
+    IV. Each schema can be converted back to dictionary (keeping some values
+        closer to python ie imaginary numbers or date object) or json
+        (enforcing casting to format json can understand)
+
+    V. If you need more complex functionality you are expected to subclass
+        python-schema
 
 ## Examples
 
-1. Simple stays simple
+Project's principle is of TDD, click hyperlinks to see working and tested
+examples.
 
-Schema:
+Side note. We use pytest, so `pip install pytest` and then just type
+`pytest`.
 
-
-```
-    from python_schema import field
-
-    class UberSimpleSchema(field.BaseField):
-        pass
-```
-
-Anything can be passed as long as it's single value, for example:
+    A. Basics - define, load, dump, access, validate [tests/test_basics.py]
