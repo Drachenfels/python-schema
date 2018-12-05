@@ -1,6 +1,3 @@
-import json
-
-
 class BasePythonSchemaError(Exception):
     """Base class in order to catch all python-schema easily (if needed)
     """
@@ -14,6 +11,11 @@ class ValueNotSetError(BasePythonSchemaError):
 class NormalisationError(BasePythonSchemaError):
     """Base error for all the normalisation issues
     """
+
+    def __init__(self, message, *args, **kwargs):
+        self.errors = [message]
+
+        super().__init__(message, *args, **kwargs)
 
 
 class NoneNotAllowedError(NormalisationError):
