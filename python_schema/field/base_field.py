@@ -51,7 +51,7 @@ class BaseField:
         self.value = misc.ValueNotSet()
         self.errors = []
 
-    def insist_value_is_correct(self, value):
+    def insist_not_empty_or_allowed_empty(self, value):
         if value is not None:
             return
 
@@ -64,7 +64,7 @@ class BaseField:
         """BaseField accepts all values as-is
         """
         try:
-            self.insist_value_is_correct(value)
+            self.insist_not_empty_or_allowed_empty(value)
         except exception.NormalisationError as err:
             self.errors.append(str(err))
 
