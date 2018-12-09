@@ -24,8 +24,11 @@ def test_load_data_to_a_field():
     assert schema.name == 'boom'
     assert schema.value == 'headshot'
     assert schema.errors == []
+    # this is example of non-json dump
     assert schema.as_dictionary() == 'headshot'
+    # this is alias to schema.dumps
     assert schema.as_json() == 'headshot'
+    assert schema.as_json() == schema.dumps()
 
     # we can reload schema as many times as we wish
     schema.loads(-1)
@@ -72,7 +75,7 @@ def test_we_can_add_validation_to_base_field():
     schema = field.BaseField(
         'boom', validators=[
             lambda val: (
-                True if val > 0 else \
+                True if val > 0 else
                 f"Value has to be bigger than zero, {val} <= 0"
             )
         ])
@@ -80,12 +83,12 @@ def test_we_can_add_validation_to_base_field():
     with pytest.raises(exception.ValidationError):
         schema.loads(-1)
 
-    assert schema.errors == ['Value has to be bigger than zero, -1 <= 0',]
+    assert schema.errors == ['Value has to be bigger than zero, -1 <= 0', ]
 
     try:
         schema.loads(-1)
     except exception.ValidationError as err:
-        assert err.errors == ['Value has to be bigger than zero, -1 <= 0',]
+        assert err.errors == ['Value has to be bigger than zero, -1 <= 0', ]
 
 
 def test_we_may_or_may_not_disallow_none():
@@ -97,7 +100,7 @@ def test_we_may_or_may_not_disallow_none():
 
     schema1.loads(None)
 
-    assert schema1.value == None
+    assert schema1.value is None
 
     schema2 = field.BaseField('agree_to_cookies', allow_none=False)
 
