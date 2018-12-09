@@ -113,10 +113,15 @@ Examples
 Project's principle is of TDD, click hyperlinks to see working and tested
 examples.
 
-Side note. We use pytest, so `pip install pytest` and then just type
-`pytest`.
+NOTE: project uses pytest
 
-Basics - define, load, dump, access, validate [`tests/test_basics.py`]
+::
+
+    $ pip install pytest
+    $ pytest
+
+
+Basics - define, load, dump, access, validate [`tests/test_basics.py`_]
 --------------------------------------------------------------------
 
 .. _`tests/test_basics.py`: https://github.com/Drachenfels/python-schema/blob/master/tests/test_basics.py
