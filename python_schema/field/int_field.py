@@ -5,8 +5,6 @@ from .base_field import BaseField
 
 class IntField(BaseField):
     def normalise(self, value):
-        """BaseField accepts all values as-is
-        """
         value = super().normalise(value)
 
         if value is None:

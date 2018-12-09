@@ -1,4 +1,4 @@
-"""Checks if IntegerField is usable.
+"""Checks if IntField is usable.
 """
 
 import pytest
@@ -7,12 +7,12 @@ from python_schema import field, exception
 
 
 def test_field_loads_data():
-    """Load data to IntegerField, check if we can access it. Try with different
+    """Load data to IntField, check if we can access it. Try with different
     types on input (normalisation should kick in).
     """
     schema = field.IntField('meaning_of_everything', allow_none=True)
 
-    class A:
+    class AnObject:
         def __str__(self):
             return '6'
 
@@ -22,7 +22,7 @@ def test_field_loads_data():
         ('0', 0),
         (42, 42),
         (0, 0),
-        (A(), 6),
+        (AnObject(), 6),
         (None, None),
     ]
 
@@ -37,7 +37,7 @@ def test_field_loads_data():
 
 
 def test_cases_when_normalisation_fails():
-    """Test checks if normalisataion is not overcommiting itself.
+    """Test checks if normalisation is not overcommitting itself.
     """
     schema = field.IntField('meaning_of_everything', allow_none=False)
 
@@ -63,6 +63,10 @@ def test_cases_when_normalisation_fails():
         except exception.NormalisationError as err:
             assert err.errors == \
                 [f'IntField cannot be populated with value: {value}']
+
+
+def test_cases_when_we_do_not_allow_nones():
+    schema = field.IntField('meaning_of_everything', allow_none=False)
 
     with pytest.raises(exception.NormalisationError):
         schema.loads(None)
