@@ -11,7 +11,7 @@ def get_version():
 
 
 def get_readme():
-    file_path = os.path.join(os.path.dirname(__file__), 'README.md')
+    file_path = os.path.join(os.path.dirname(__file__), 'README.rst')
 
     with open(file_path) as fpl:
         return fpl.read()
