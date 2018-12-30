@@ -1,0 +1,7 @@
+CollectionField:
+
+ - there are two layers of validation, one is on CollectionField then on
+   whatever it contains, because it may be not feasible to validate each field
+   individually while the main collection has failed there is two layers of
+   validation, individual elements are checked only if the main collection is
+   valid
