@@ -1,7 +1,7 @@
 from python_schema import misc, exception
 
 
-class BaseField:
+class BaseField:  # pylint: disable=too-many-instance-attributes
     def __init__(
             self, name, description='', validators=None, allow_none=True,
             default=None, parent=None):
@@ -38,15 +38,34 @@ class BaseField:
         self.allow_none = allow_none
 
         self.description = description
-        self.parent = None if parent is None else parent
+        self.parent = parent
 
         self.default = default
 
-    def is_set(self):
-        return getattr(self.value, 'is_set', True)
+        # this makes pylint happy
+        self.value = None
+        self.errors = None
 
-    def reset(self):
-        """Reset field to base state.
+        # and this resets the state of the field
+        self.reset_state()
+
+    def get_inheritable_attributes(self):
+        """When we create instance of this class programatically, we need to
+        know what sort of data constructor expects. It's essential for fields
+        like CollectionField and SchemaField.
+
+        Name is always expected so it's excluded from this list.
+        """
+        return [
+            'description', 'validators', 'allow_none', 'default', 'parent'
+        ]
+
+    @property
+    def is_set(self):
+        return not isinstance(self.value, (misc.ValueNotSet,))
+
+    def reset_state(self):
+        """Reset field to base state (before first loads).
         """
         self.value = misc.ValueNotSet()
         self.errors = []
@@ -75,13 +94,13 @@ class BaseField:
     def as_json(self):
         """Field should return json valid value.
         """
-        if self.is_set():
+        if self.is_set:
             return self.value
 
         return self.default
 
     def as_dictionary(self):
-        if self.is_set():
+        if self.is_set:
             return self.value
 
         return self.default
@@ -95,8 +114,8 @@ class BaseField:
 
             self.errors.append(return_value)
 
-    def loads(self, value):
-        self.reset()
+    def prepare_value(self, value):
+        self.reset_state()
 
         value = self.normalise(value)
 
@@ -105,22 +124,14 @@ class BaseField:
         if self.errors:
             raise exception.ValidationError(errors=self.errors)
 
-        self.value = value
+        return value
+
+    def loads(self, value):
+        self.value = self.prepare_value(value)
 
     def dumps(self):
         return self.as_json()
 
-    # def make_new(self, parent):
-    #     return self.__class__(
-    #         name=self.name, description=self.description,
-    #         validators=self.validators, allow_blank=self.allow_blank,
-    #         parent=parent)
-    #
-    # def populate(self, value):
-    #     self.confirm_argument_is_of_expected_shape(value)
-    #
-    #     self.data = None if value is None else self.normalise(value)
-    #
     # def get_canonical_string(self):
     #     ancestors = []
     #     parent = self.parent
