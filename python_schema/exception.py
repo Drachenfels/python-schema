@@ -3,12 +3,16 @@ class BasePythonSchemaError(Exception):
     """
 
 
-class ValueNotSetError(BasePythonSchemaError):
+class PayloadError(BasePythonSchemaError):
+    pass
+
+
+class ValueNotSetError(PayloadError):
     """Happens when we try to read a field that was never loaded
     """
 
 
-class NormalisationError(BasePythonSchemaError):
+class NormalisationError(PayloadError):
     """Base error for all the normalisation issues
     """
 
@@ -23,7 +27,7 @@ class NoneNotAllowedError(NormalisationError):
     """
 
 
-class ValidationError(BasePythonSchemaError):
+class ValidationError(PayloadError):
     """Exception happens when one or more of validators fails.
     """
     def __init__(self, errors, *args, **kwargs):
