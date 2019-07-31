@@ -11,7 +11,7 @@ def get_version():
 
 
 def get_readme():
-    file_path = os.path.join(os.path.dirname(__file__), 'README.rst')
+    file_path = os.path.join(os.path.dirname(__file__), 'README.md')
 
     with open(file_path) as fpl:
         return fpl.read()
@@ -32,6 +32,7 @@ setup(
     version=get_version(),
     description='Simple but not simplistic schema for data-validation',
     long_description=get_readme(),
+    long_description_content_type='text/markdown',
     python_requires='>=3.7',
     classifiers=[
         'Development Status :: 1 - Planning',
