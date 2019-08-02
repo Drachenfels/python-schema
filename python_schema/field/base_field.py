@@ -2,9 +2,23 @@ from python_schema import misc, exception
 
 
 class BaseField:  # pylint: disable=too-many-instance-attributes
+    # configuration of the object, those attributes can be set either on class
+    # directly or as parameter of __init__
+    description = ''
+    validators = None
+    allow_none = True
+    default_value = misc.NotSet
+
+    # state of the object, should not be altered manually in order to avoid
+    # unexpected behaviour
+    parent = None
+    errors = None
+    _value = misc.NotSet
+    _materialised = False
+
     def __init__(
-            self, name, description='', validators=None, allow_none=True,
-            default=None, parent=None):
+            self, name, description=None, validators=None, allow_none=None,
+            default_value=misc.NotSet):
         """Short description of what all those arguments stand for:
 
             name :: the only mandatory field, it basically tells how the field
@@ -13,7 +27,7 @@ class BaseField:  # pylint: disable=too-many-instance-attributes
                 and error code generation
 
             description :: human readable description of the field, used for
-                auto generated doc (default: '')
+                auto generated doc and (in future) openapi (default: '')
 
             validators :: list of validators that should be applied, data prior
                 to validation is normalised (for example boolean field converts
@@ -22,55 +36,79 @@ class BaseField:  # pylint: disable=too-many-instance-attributes
 
             allow_none :: if given field allows None as data, this can
                 be handled via validator but for certain systems null values
-                are impossibility or amigbous (for boolean field None may mean
+                are impossibility or ambiguous (for boolean field None may mean
                 False or that user didn't care to select answer)
                 (default: True)
 
-            default :: if field was not required and not provided, default
-                value is being returned on dump (default: None)
-
-            parent :: if object is part of bigger tree we can set a parent to
-                it - most of the time is set automatically by python-schema
-                (default: None)
+            default_value :: if field was provided with any value,
+                default_value may be returned, is not set on default and will
+                cause exception if attempted to use in such state
         """
         self.name = name
-        self.validators = [] if validators is None else validators
-        self.allow_none = allow_none
 
-        self.description = description
-        self.parent = parent
-
-        self.default = default
-
-        # this makes pylint happy
-        self.value = None
-        self.errors = None
+        self.validators = (
+            ([] if self.validators is None else self.validators)
+            if validators is None else validators
+        )
+        self.allow_none = (
+            (True if self.allow_none is True else False)
+            if allow_none is None else allow_none
+        )
+        self.description = (
+            ('' if not self.description else self.description)
+            if description is None else description
+        )
+        self.default_value = (
+            self.default_value if default_value is misc.NotSet else
+            default_value
+        )
 
         # and this resets the state of the field
         self.reset_state()
 
-    def get_inheritable_attributes(self):
-        """When we create instance of this class programatically, we need to
-        know what sort of data constructor expects. It's essential for fields
-        like CollectionField and SchemaField.
+    def __eq__(self, other):
+        return self.value == other
 
-        Name is always expected so it's excluded from this list.
-        """
-        return [
-            'description', 'validators', 'allow_none', 'default', 'parent'
-        ]
+    def __str__(self):
+        return (
+            f'<{self.__class__.__name__}({self.name}={self.value})>'
+        )
+
+    def __repr__(self):
+        return str(self)
 
     @property
-    def is_set(self):
-        return not isinstance(self.value, (misc.ValueNotSet,))
+    def total_parents(self):
+        counter = 0
+
+        parent = self.parent
+
+        while parent is not None:
+            parent = parent.parent
+            counter += 1
+
+        return counter
+
+    def update_defaults(self, **kwargs):
+        kwargs.setdefault('name', self.name)
+        kwargs.setdefault('description', self.description)
+        kwargs.setdefault('validators', self.validators)
+        kwargs.setdefault('allow_none', self.allow_none)
+        kwargs.setdefault('default_value', self.default_value)
+
+        return kwargs
+
+    def make_new(self, **kwargs):
+        return self.__class__(**self.update_defaults(**kwargs))
 
     def reset_state(self):
-        """Reset field to base state (before first loads).
+        """Reset field to base state (before first `.loads`).
         """
-        self.value = misc.ValueNotSet()
+        self.value = misc.NotSet
         self.errors = []
+        self.parent = None
 
-    def insist_not_empty_or_allowed_empty(self, value):
+    def insist_not_none_or_none_allowed(self, value):
         if value is not None:
             return
 
@@ -80,10 +118,8 @@ class BaseField:  # pylint: disable=too-many-instance-attributes
         raise exception.NoneNotAllowedError("None is not allowed value")
 
     def normalise(self, value):
-        """BaseField accepts all values as-is
-        """
         try:
-            self.insist_not_empty_or_allowed_empty(value)
+            self.insist_not_none_or_none_allowed(value)
         except exception.NormalisationError as err:
             self.errors.append(str(err))
 
@@ -91,56 +127,89 @@ class BaseField:  # pylint: disable=too-many-instance-attributes
 
         return value
 
-    def as_json(self):
-        """Field should return json valid value.
-        """
-        if self.is_set:
-            return self.value
-
-        return self.default
-
-    def as_dictionary(self):
-        if self.is_set:
-            return self.value
-
-        return self.default
-
     def validate(self, value):
         for validate in self.validators:
-            return_value = validate(value)
+            try:
+                return_value = validate(value)
 
-            if return_value is True:
-                continue
+                if return_value is True:
+                    continue
 
-            self.errors.append(return_value)
+                self.errors.append(return_value)
+            except exception.ValidationError as err:
+                self.errors.append(str(err))
 
-    def prepare_value(self, value):
-        self.reset_state()
-
-        value = self.normalise(value)
-
-        self.validate(value)
+                raise exception.ValidationError('Validation error')
 
         if self.errors:
-            raise exception.ValidationError(errors=self.errors)
+            raise exception.ValidationError('Validation error')
 
-        return value
+    def as_json(self):
+        """Field returns value that can be json.dumped (ie datetime is
+        converted to a string).
 
-    def loads(self, value):
-        self.value = self.prepare_value(value)
+        Note: because BaseField is base class that has no specific
+        implementation we may end up with very non-json representation when
+        calling as_json. The reason is that BaseField don't have enough
+        information with what sort of data it's working with and casting
+        everything into string is not a solution.
+        """
+        return self.value
+
+    def as_python(self):
+        """Field returns python valid data (ie datetime stays as a datatime)
+        """
+        return self.value
+
+    @property
+    def is_set(self):
+        return self._value is not misc.NotSet
+
+    @property
+    def is_default_value_set(self):
+        return self.default_value is not misc.NotSet
+
+    @property
+    def is_materialised(self):
+        return self._materialised
+
+    @property
+    def value(self):
+        if self.is_set:
+            return self._value
+
+        if self.is_default_value_set:
+            return self.default_value
+
+        raise exception.ReadValueError(
+            "Load field with data or provide default_value")
+
+    @value.setter
+    def value(self, value):
+        self._value = value
+
+    @value.deleter
+    def value(self):
+        self._value = misc.NotSet
+
+    def materialise(self):
+        """Set field as `materialised`, materialisation happens when we perform
+        first time .loads. Thus is perfect for lazy loading and computation
+        heavy operations.
+        """
+        self._materialised = True
+
+    def loads(self, payload):
+        self.reset_state()
+
+        if not self.is_materialised:
+            self.materialise()
+
+        payload = self.normalise(payload)
+
+        self.validate(payload)
+
+        self.value = payload
 
     def dumps(self):
         return self.as_json()
-
-    # def get_canonical_string(self):
-    #     ancestors = []
-    #     parent = self.parent
-    #
-    #     while parent:
-    #         ancestors.insert(0, parent.name)
-    #
-    #         parent = parent.parent
-    #
-    #     ancestors.append(self.name)
-    #
-    #     return '.'.join(ancestors)
