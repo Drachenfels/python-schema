@@ -32,7 +32,7 @@ def test_field_loads_data():
         assert schema.name == 'meaning_of_everything'
         assert schema.value == value_after
         assert schema.errors == []
-        assert schema.as_dictionary() == value_after
+        assert schema.as_python() == value_after
         assert schema.as_json() == value_after
 
 
@@ -59,7 +59,7 @@ def test_cases_when_normalisation_works_but_effects_are_awkward():
         assert schema.name == 'meaning_of_everything'
         assert schema.value == value_after
         assert schema.errors == []
-        assert schema.as_dictionary() == value_after
+        assert schema.as_python() == value_after
         assert schema.as_json() == value_after
 
 
@@ -72,4 +72,5 @@ def test_cases_when_we_do_not_allow_nones():
     try:
         schema.loads(None)
     except exception.NormalisationError as err:
-        assert err.errors == [f'None is not allowed value']
+        assert schema.errors == ['None is not allowed value']
+        assert str(err) == 'None is not allowed value'
