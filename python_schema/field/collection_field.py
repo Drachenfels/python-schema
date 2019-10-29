@@ -42,9 +42,10 @@ class CollectionField(BaseField):
 
     def materialise(self):
         if isinstance(self.type_, str):
-            instance = misc.ImportModule(self.type_).get_class()()
+            instance = misc.ImportModule(self.type_).get_class()(
+                name=self.name)
         elif isinstance(self.type_, type):
-            instance = self.type_()
+            instance = self.type_(name=self.name)
         else:
             instance = self.type_
 

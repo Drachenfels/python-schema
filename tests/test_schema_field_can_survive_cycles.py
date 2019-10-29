@@ -1,7 +1,3 @@
-"""Checks if SchemaField and CollectionField can handle cases when it's
-possible to introduce cycles.
-"""
-
 from python_schema import field
 
 
@@ -44,8 +40,6 @@ class Author(field.SchemaField):
 
 
 def test_blogpost_has_an_author_and_authors_have_list_of_blogposts():
-    """Inline schema is created on the fly.
-    """
     payload = {
         'title': 'Chapter I',
         'author': {

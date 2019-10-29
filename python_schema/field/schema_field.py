@@ -4,30 +4,30 @@ from .base_field import BaseField
 
 
 class SchemaField(BaseField):
-    # configuration of the object:
+    # configuration:
+
+    # throw exception if loads receives unexpected key, otherwise ignore
+    # silently
     exception_on_unknown = True
     fields = None
+    schema = None  # allows lazy load and inline definition
 
-    # state of the object:
+    # state:
 
-    # fields are all fields set on that schema
-    fields = None
-
-    # _computed_fields are all fields set on that schema + everything that is
-    # inherited from parent classes
+    # computed_fields takes into account parents, overrides and everything in
+    # between, is set automatically during materailisation
     _computed_fields = None
 
-    # if _class is not none we are lazy loading SchemaField
-    _class = None
-
     def __init__(
-            self, name=None, class_=None, fields=None,
-            *args, **kwargs):  # NOQA
+            self, name=None, schema=None, fields=None,
+            exception_on_unknown=None, **kwargs):  # NOQA
         """Initialises new instance of the Schema.
 
         name - optional name for the schema if not given it will be taken from
             __class__.__name__ what is usually enough but if class Schema is
             created `inline` probably makes sense to override it
+
+        class_ - class of schema field, should only be in use when lazy loading
 
         fields - optional list of fields that should be added to this schema,
             allows to modyfy on the fly content of SchemaField
@@ -37,59 +37,60 @@ class SchemaField(BaseField):
         if name is None:
             name = self.__class__.__name__
 
-        super().__init__(name, *args, **kwargs)
-
-        if fields is None:
-            fields = []
+        super().__init__(name, **kwargs)
 
         if self.fields is None:
             self.fields = []
 
-        new_fields = {field.name: field for field in fields}
+        # this allows to set or override any fields defined on schema
+        if fields:
+            base_fields = {field.name: field for field in self.fields}
 
-        base_fields = {field.name: field for field in self.fields}
+            base_fields.update({
+                field.name: field for field in fields
+            })
 
-        base_fields.update(new_fields)
+            self.fields = list(base_fields.values())
 
-        self.fields = list(base_fields.values())
+        self.exception_on_unknown = (
+            (True if self.exception_on_unknown is True else False)
+            if exception_on_unknown is None else exception_on_unknown
+        )
 
-        self._class = class_
+        self.schema = self.__class__ if schema is None else schema
 
     def materialise(self):
-        if self.is_materialised:
-            return
-
-        super().materialise()
-
-        if self._class is None:
-            class_type = self.__class__
-        elif isinstance(self._class, str):
-            class_type = misc.ImportModule(self._class).get_instance()
-        elif isinstance(self._class, SchemaField):
-            class_type = self._class.__class__
+        if isinstance(self.schema, str):
+            schema = misc.ImportModule(self.schema).get_class()
+        elif isinstance(self.schema, SchemaField):
+            schema = self.schema.__class__
         else:
-            class_type = self._class
-
-        if self._class is not None:
-            self.fields = class_type.fields
-
-        # self.fields might be injected on __init__ level thus this special
-        # case
-        different_fields = [self.fields] + [
-            getattr(some_class, 'fields')
-            for some_class in class_type.mro()[:-1]
-            if getattr(some_class, 'fields', None)
-        ]
+            schema = self.schema
 
         self._computed_fields = {}
 
-        # reads all parents with exception of base Object type
-        for fields in different_fields:
+        for field in self.fields:
+            if field.name in self._computed_fields:
+                continue
+
+            self._computed_fields[field.name] = field.make_new(
+                name=field.name)
+
+        # reads all parents and adds all parents fields to our list of fields
+        for ancestor in schema.mro()[:-1]:
+            fields = getattr(ancestor, 'fields', None)
+
+            if not fields:
+                continue
+
             for field in fields:
                 if field.name in self._computed_fields:
                     continue
 
-                self._computed_fields[field.name] = field.make_new()
+                self._computed_fields[field.name] = field.make_new(
+                    name=field.name)
+
+        super().materialise()
 
     def normalise(self, value):
         value = super().normalise(value)
@@ -114,21 +115,16 @@ class SchemaField(BaseField):
     def update_defaults(self, **kwargs):
         kwargs = super().update_defaults(**kwargs)
 
-        kwargs.setdefault('class_', self._class)
+        kwargs.setdefault('schema', self.schema)
+        kwargs.setdefault('fields', self.fields)
+        kwargs.setdefault('exception_on_unknown', self.exception_on_unknown)
 
         return kwargs
 
-    def loads(self, payload):
-        self.reset_state()
-
-        self.materialise()
-
-        payload = self.normalise(payload)
-
-        self.validate(payload)
-
-        # when value is not dict-like, finish early
+    def _loads(self, payload):
         if payload is None:
+            self.value = None
+
             return
 
         schema = {}
@@ -143,28 +139,6 @@ class SchemaField(BaseField):
 
         self.value = schema
 
-    def as_json(self):
-        if not self.is_set:
-            return self.default
-
-        output = {}
-
-        for key, value in self.value.items():
-            output[key] = value.as_json()
-
-        return output
-
-    def as_python(self):
-        if not self.is_set:
-            return self.default
-
-        output = {}
-
-        for key, value in self.value.items():
-            output[key] = value.as_python()
-
-        return output
-
     def __str__(self):
         prefix = '\t' * self.total_parents
 
@@ -172,7 +146,13 @@ class SchemaField(BaseField):
             f'<SchemaField({self.name}={{',
         ]
 
-        for key, value in self.value.items():
+        value = self.computed_value
+
+        if value is misc.NotSet:
+            output.append(f'{prefix}\tNotSet')
+            value = {}
+
+        for key, value in value.items():
             output.append(f'{prefix}\t{key}: {value}')
 
         output.append(
@@ -180,11 +160,6 @@ class SchemaField(BaseField):
         )
 
         return '\n'.join(output)
-
-    def __repr__(self):
-        return (
-            f'<SchemaField({self.name}={self.value})>'
-        )
 
     def __eq__(self, dct):
         if not hasattr(dct, 'items') or not hasattr(dct, 'keys'):
@@ -194,8 +169,9 @@ class SchemaField(BaseField):
             )
 
         local_keys = set([
-            key for key, field in self.value.items() if not isinstance(
-                field.value, misc.NotSet)])
+            key for key, field in self.value.items()
+            if field.computed_value is not misc.NotSet
+        ])
 
         if set(dct.keys()).symmetric_difference(local_keys):
             return False
@@ -218,8 +194,45 @@ class SchemaField(BaseField):
         except IndexError:
             raise StopIteration
 
+    def keys(self):
+        return self.value.keys()
+
+    def values(self):
+        return self.value.values()
+
+    def items(self):
+        return self.value.items()
+
     def __getitem__(self, key):
         if key not in self._computed_fields:
             raise exception.ReadValueError(f"Schema has no field {key}")
 
         return self.value[key]
+
+    def as_json(self):
+        if self.value is None:
+            return None
+
+        output = {}
+
+        for key, field in self.value.items():
+            if field.computed_value is misc.NotSet:
+                continue
+
+            output[key] = field.as_json()
+
+        return output
+
+    def as_python(self):
+        if self.value is None:
+            return None
+
+        output = {}
+
+        for key, field in self.value.items():
+            if field.computed_value is misc.NotSet:
+                continue
+
+            output[key] = field.as_python()
+
+        return output
