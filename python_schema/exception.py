@@ -1,36 +1,49 @@
 class BasePythonSchemaError(Exception):
-    """Base class in order to catch all python-schema easily (if needed)
+    """Base class in order to catch all python-schema easily
     """
 
 
-class PayloadError(BasePythonSchemaError):
+class SchemaConfigurationError(BasePythonSchemaError):
+    """When schema or element of it is misconfigured and cannot work in such
+    shape.
+    """
     pass
 
 
-class ValueNotSetError(PayloadError):
-    """Happens when we try to read a field that was never loaded
+class PayloadError(BasePythonSchemaError):
+    """Base exception fo for all payload related problems.
     """
+    pass
 
 
 class NormalisationError(PayloadError):
-    """Base error for all the normalisation issues
-    """
-
-    def __init__(self, message, *args, **kwargs):
-        self.errors = [message]
-
-        super().__init__(message, *args, **kwargs)
-
-
-class NoneNotAllowedError(NormalisationError):
-    """Happens when we try to load field with None, but it's not allowed
+    """Base exception for group of errors that happen during normalisation.
     """
 
 
 class ValidationError(PayloadError):
-    """Exception happens when one or more of validators fails.
-    """
-    def __init__(self, errors, *args, **kwargs):
-        self.errors = errors
+    """Base exception for group of errors that happen during validation.
 
-        super().__init__(*args, **kwargs)
+    Raising ValidationError inside validating function causes short-circuit
+    validation, in contrast to returning anything but string.
+    """
+
+
+class NoneNotAllowedError(NormalisationError):
+    """Normalisation error when object is fed with None but it's not allowed
+    value.
+    """
+
+
+class UnknownFieldError(NormalisationError):
+    """Normalisation error when schema is fed with pair key=value that is not
+    expected to have.
+    """
+    pass
+
+
+class ReadValueError(BasePythonSchemaError):
+    """Exception happens when attempting to read a field that was never
+    populated with data.
+    """
+    pass

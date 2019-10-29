@@ -1,25 +1,16 @@
-from python_schema import exception
+from python_schema import exception, misc
 
 from .base_field import BaseField
 
 
 class CollectionField(BaseField):
+    # after materialisation collection will consist elements of this typer
+    _computed_type= None
+
     def __init__(self, name, type_, *args, **kwargs):
         super().__init__(name, *args, **kwargs)
 
-        # self.type_ we expect that after this point is going to be fully
-        # fleshed out
-        if isinstance(type_, type):
-            type_ = type_(name=self.name, parent=self)
-
         self.type_ = type_
-
-    def get_inheritable_attributes(self):
-        attributes = super().get_inheritable_attributes()
-
-        attributes.append('type_')
-
-        return attributes
 
     def normalise(self, value):
         value = super().normalise(value)
@@ -29,89 +20,122 @@ class CollectionField(BaseField):
 
         message = (
             f"CollectionField cannot be populated with value: {value}. "
-            "Value is not considered iterable."
+            "Value is not iterable."
         )
 
-        # first check if we can iterate over value
         try:
-            for elm in value:
-                pass
+            # check if we can iterate over value, it has to be list-like object
+            [elm for elm in value]
         except (TypeError, ValueError):
             self.errors.append(message)
 
             raise exception.NormalisationError(message)
 
-        normalised_values = []
+        return value
 
-        for elm in value:
-            try:
-                normalised_values.append(self.type_.normalise(elm))
-            except exception.NormalisationError as err:
-                self.errors.append(str(err))
+    def update_defaults(self, **kwargs):
+        kwargs = super().update_defaults(**kwargs)
 
-        if self.errors:
-            raise exception.NormalisationError(self.errors)
+        kwargs.setdefault('type_', self.type_)
 
-        return normalised_values
+        return kwargs
 
-    def create_instance(self, idx):
-        kwargs = {
-            'name': f"{self.name}[{idx}]",
-        }
+    def materialise(self):
+        if isinstance(self.type_, str):
+            instance = misc.ImportModule(self.type_).get_class()(
+                name=self.name)
+        elif isinstance(self.type_, type):
+            instance = self.type_(name=self.name)
+        else:
+            instance = self.type_
 
-        for attribute in self.type_.get_inheritable_attributes():
-            kwargs[attribute] = getattr(self.type_, attribute)
+        self._computed_type = instance
 
-        return self.type_.__class__(**kwargs)
+        super().materialise()
 
-    def prepare_value(self, value):
-        value = super().prepare_value(value)
-
-        # when value is not iterable, finish early
-        if value is None:
-            return value
-
+    def _loads(self, payload):
         collection = []
-        collection_errors = {}
+        normalisation_errors = {}
+        validation_errors = {}
 
-        for idx, val in enumerate(value):
-            instance = self.create_instance(idx)
+        for idx, val in enumerate(payload):
+            name = f"{self.name}[{idx}]"
+
+            instance = self._computed_type.make_new(name=name)
 
             try:
                 instance.loads(val)
-            except (exception.PayloadError,):
-                collection_errors[idx] = instance.errors
+            except (exception.NormalisationError,):
+                normalisation_errors[idx] = instance.errors
+
+                continue
+            except (exception.ValidationError,):
+                validation_errors[idx] = instance.errors
 
                 continue
 
+            instance.parent = self
+
             collection.append(instance)
 
-        if collection_errors:
-            self.errors = [collection_errors]
+        if normalisation_errors:
+            self.errors = [normalisation_errors]
 
-        if self.errors:
-            raise exception.ValidationError(errors=self.errors)
+            raise exception.PayloadError(
+                "Unable to load items in collection: {}".format(self.errors))
 
-        return collection
+        if validation_errors:
+            self.errors = [validation_errors]
+
+            raise exception.ValidationError('Validation error')
+
+        self.value = collection
+
+    def __eq__(self, values):
+        if len(self) != len(values):
+            return False
+
+        for idx, value in enumerate(values):
+            if self[idx] != value:
+                return False
+
+        return True
+
+    def __str__(self):
+        prefix = '\t' * self.total_parents
+
+        output = [
+            f'<CollectionField({self.name}=[',
+        ]
+
+        value = self.computed_value
+
+        if value is misc.NotSet:
+            value = ['NotSet']
+
+        for value in value:
+            output.append('\t{},'.format(value))
+
+        output.append(
+            f'{prefix}])>',
+        )
+
+        return '\n'.join(output)
+
+    def __getitem__(self, idx):
+        return self.value[idx]
+
+    def __len__(self):
+        return len(self.value)
 
     def as_json(self):
-        if not self.is_set:
-            return self.default
-
         if self.value is None:
-            return self.value
+            return None
 
-        return [
-            elm.as_json() for elm in self.value
-        ]
+        return [elm.as_json() for elm in self.value]
 
-    def as_dictionary(self):
-        if not self.is_set:
-            return self.default
-
+    def as_python(self):
         if self.value is None:
-            return self.value
+            return None
 
-        return [
-            elm.as_dictionary() for elm in self.value
-        ]
+        return [elm.as_python() for elm in self.value]

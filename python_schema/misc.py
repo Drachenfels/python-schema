@@ -1,21 +1,18 @@
-from . import exception
+import importlib
 
 
-class ValueNotSet:
-    is_set = False
+class NotSet:
+    pass
 
-    def __str__(self):
-        return "NotSet"
 
-    def __repr__(self):
-        return self.__str__()
+class ImportModule:
+    def __init__(self, path_to_class):
+        self.class_name = path_to_class.split('.')[-1]
+        self.path_to_module = path_to_class[:(len(self.class_name) + 1) * -1]
 
-    def __eq__(self, value):
-        try:
-            if isinstance(self, value):
-                return True
-        except TypeError:
-            pass
+    def get_class(self):
+        """Methods attempt to import class from module and returns instance of
+        the imported class"""
+        module = importlib.import_module(self.path_to_module)
 
-        raise exception.ValueNotSetError(
-            "Value on field was not set, thus comparison will always fail")
+        return getattr(module, self.class_name)

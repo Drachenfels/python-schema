@@ -30,9 +30,9 @@ def test_field_loads_data():
         schema.loads(value_before)
 
         assert schema.name == 'meaning_of_everything'
-        assert schema.value == value_after
+        assert schema == value_after
         assert schema.errors == []
-        assert schema.as_dictionary() == value_after
+        assert schema.as_python() == value_after
         assert schema.as_json() == value_after
 
 
@@ -61,8 +61,10 @@ def test_cases_when_normalisation_fails():
         try:
             schema.loads(value)
         except exception.NormalisationError as err:
-            assert err.errors == \
+            assert schema.errors == \
                 [f'IntField cannot be populated with value: {value}']
+            assert str(err) == \
+                f'IntField cannot be populated with value: {value}'
 
 
 def test_cases_when_we_do_not_allow_nones():
@@ -74,4 +76,5 @@ def test_cases_when_we_do_not_allow_nones():
     try:
         schema.loads(None)
     except exception.NormalisationError as err:
-        assert err.errors == [f'None is not allowed value']
+        assert schema.errors == ['None is not allowed value']
+        assert str(err) == 'None is not allowed value'
