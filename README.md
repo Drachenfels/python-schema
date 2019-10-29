@@ -126,7 +126,7 @@ What you do not have in library:
 * ORM integration
 * decorators
 * meta classes
-* module of badly formatted 600 lines of code with references as a way of populating objects
+* modules of badly formatted 1k+ lines of code with references flying all over the place
 * magic
 * methods that do some complex stuff
 * integration with anything (unless working with json strings we call integration)
