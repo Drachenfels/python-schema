@@ -32,12 +32,14 @@ Each field has two primary functions to load data (where normalisation and
 validation happens) and to dump data (where conversion to either native python
 or json-compatible format happens).
 
-> “Talk is cheap. Show me the code.” - Linus Torvald
-
 ---
 ## Examples
 
-One of the principles of python-schema is TDD, each case study will be functioning test copy-pasted from the source code (that being said there is more tests than case studies).
+> “Talk is cheap. Show me the code.” - Linus Torvald
+
+One of the principles of python-schema is TDD, each case study will be
+functional test copy-pasted from the test suite (that being said there is many
+more tests than shown below).
 
 ### Case 1 - Simple Schema
 see [Case #1] (https://www.example.com/)
@@ -113,8 +115,10 @@ Only essentials are part of library:
 * required fields with support of inheritance and complex structures
 * rudimentary validation but easy to expand
 * minimum 3rd-party depdencies (currently none)
-* accept json-like dictionary or python primitives on input (exclusively everything that could show up after json.dumps)
-* output is either json-like dictionary or python native code (former guarantees json.dumps later oes not)
+* accept json-like dictionary or python primitives on input (exclusively
+  everything that could show up after json.dumps)
+* output is either json-like dictionary or python native code (former
+  guarantees json.dumps later oes not)
 * if in doubt or need custom, code is simple, subclass python-schema and override/extend
 
 What you do not have in library:
@@ -146,15 +150,14 @@ What you do not have in library:
 
     a. return json compatible content (everything unknown to json.dumps converted to string)
 
-4. Each field understands context, ie. when working with datetime, dumping will return date according to current (users?) timezone
+4. Each field understands context, ie. when working with datetime, dumping will
+   return date according to current user(s) timezone
 
 ---
 ## Don't like it, do you know anything better?
 
 Of course! There is plenty that I used as inspiration (what to do) and warning
-(what not to do).
-
-From the most influential to the least.
+(what not to do):
 
 * [JSON Schema (https://json-schema.org/)] (https://json-schema.org/)
 * [Marshmallow (https://marshmallow.readthedocs.io/en/3.0/)] (https://marshmallow.readthedocs.io/en/3.0/)
