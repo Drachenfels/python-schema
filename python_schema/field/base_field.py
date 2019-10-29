@@ -1,4 +1,4 @@
-from python_schema import misc, exception
+from python_schema import exception, misc
 
 
 class BaseField:  # pylint: disable=too-many-instance-attributes
@@ -70,12 +70,17 @@ class BaseField:  # pylint: disable=too-many-instance-attributes
         return self.value == other
 
     def __str__(self):
+        value = self.computed_value
+
+        if value is misc.NotSet:
+            value = 'NotSet'
+
         return (
-            f'<{self.__class__.__name__}({self.name}={self.value})>'
+            f'<{self.__class__.__name__}({self.name}={value})>'
         )
 
     def __repr__(self):
-        return str(self)
+        return self.__str__()
 
     @property
     def total_parents(self):
@@ -160,7 +165,6 @@ class BaseField:  # pylint: disable=too-many-instance-attributes
         """Field returns python valid data (ie datetime stays as a datatime)
         """
         return self.value
-
     @property
     def is_set(self):
         return self._value is not misc.NotSet
@@ -172,6 +176,13 @@ class BaseField:  # pylint: disable=too-many-instance-attributes
     @property
     def is_materialised(self):
         return self._materialised
+
+    @property
+    def computed_value(self):
+        try:
+            return self.value
+        except exception.ReadValueError:
+            return misc.NotSet
 
     @property
     def value(self):
@@ -199,6 +210,9 @@ class BaseField:  # pylint: disable=too-many-instance-attributes
         """
         self._materialised = True
 
+    def _loads(self, payload):
+        self.value = payload
+
     def loads(self, payload):
         self.reset_state()
 
@@ -209,7 +223,12 @@ class BaseField:  # pylint: disable=too-many-instance-attributes
 
         self.validate(payload)
 
-        self.value = payload
+        if payload is None:
+            self.value = payload
+
+            return
+
+        self._loads(payload)
 
     def dumps(self):
         return self.as_json()
