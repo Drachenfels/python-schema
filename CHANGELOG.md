@@ -7,13 +7,19 @@
    named arguments (if there is not too many of them)
  * add coverage
  * make it possible to self-reference for schema and collections when
-   performing loads
+   performing loads (when object provides UUID, use it as identity check)
  * make sure that CollectionField might be lazy loaded as well and in general
    behaves similar to SchemaField on that front
 
 
 ---
 ## Release 0.4
+
+### Core
+
+ * SchemaField that can be build using other fields as a defintion
+ * lazy loading of other classes for cases when SchemaField is using itself as a definition
+ * CollectionField was upgraded to allow lazy load as well
 
  - test case for SchemaField with two parents that override each other's attributes
  - test case for CollectionField with SchemaField in it
