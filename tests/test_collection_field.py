@@ -285,3 +285,17 @@ def test_collection_of_same_collection_works():
         [2, 4, 6],
         [12, 18, 22]
     ]
+
+    # check if validation is working as expected
+
+    with pytest.raises(exception.ValidationError):
+        master_collection.loads([
+            [2, 4],
+            [2, 5, 6],
+            [6, 12],
+        ])
+
+    with pytest.raises(exception.ValidationError):
+        master_collection.loads([
+            [2,],
+        ])
