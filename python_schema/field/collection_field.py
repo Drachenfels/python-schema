@@ -1,16 +1,14 @@
-from python_schema import exception
+from python_schema import exception, misc
 
 from .base_field import BaseField
 
 
 class CollectionField(BaseField):
+    # after materialisation collection will consist elements of this typer
+    _computed_type= None
+
     def __init__(self, name, type_, *args, **kwargs):
         super().__init__(name, *args, **kwargs)
-
-        # self.type_ can be passed as instance of type, after this point we
-        # will consistently expect it to be an instance
-        if isinstance(type_, type):
-            type_ = type_(name=self.name)
 
         self.type_ = type_
 
@@ -42,7 +40,19 @@ class CollectionField(BaseField):
 
         return kwargs
 
-    def load_collection(self, payload):
+    def materialise(self):
+        if isinstance(self.type_, str):
+            instance = misc.ImportModule(self.type_).get_class()()
+        elif isinstance(self.type_, type):
+            instance = self.type_()
+        else:
+            instance = self.type_
+
+        self._computed_type = instance
+
+        super().materialise()
+
+    def _loads(self, payload):
         collection = []
         normalisation_errors = {}
         validation_errors = {}
@@ -50,7 +60,7 @@ class CollectionField(BaseField):
         for idx, val in enumerate(payload):
             name = f"{self.name}[{idx}]"
 
-            instance = self.type_.make_new(name=name)
+            instance = self._computed_type.make_new(name=name)
 
             try:
                 instance.loads(val)
@@ -78,17 +88,7 @@ class CollectionField(BaseField):
 
             raise exception.ValidationError('Validation error')
 
-        return collection
-
-    def loads(self, payload):
-        self.reset_state()
-
-        payload = self.normalise(payload)
-
-        self.validate(payload)
-
-        self.value = payload if payload is None else \
-            self.load_collection(payload)
+        self.value = collection
 
     def __eq__(self, values):
         if len(self) != len(values):
@@ -107,7 +107,12 @@ class CollectionField(BaseField):
             f'<CollectionField({self.name}=[',
         ]
 
-        for value in self.value:
+        value = self.computed_value
+
+        if value is misc.NotSet:
+            value = ['NotSet']
+
+        for value in value:
             output.append('\t{},'.format(value))
 
         output.append(
@@ -116,9 +121,6 @@ class CollectionField(BaseField):
 
         return '\n'.join(output)
 
-    def __repr__(self):
-        return super().__str__()
-
     def __getitem__(self, idx):
         return self.value[idx]
 
@@ -126,17 +128,13 @@ class CollectionField(BaseField):
         return len(self.value)
 
     def as_json(self):
-        val = self.value
+        if self.value is None:
+            return None
 
-        if self.is_set:
-            return None if val is None else [elm.as_json() for elm in val]
-
-        return val
+        return [elm.as_json() for elm in self.value]
 
     def as_python(self):
-        val = self.value
+        if self.value is None:
+            return None
 
-        if self.is_set:
-            return None if val is None else [elm.as_python() for elm in val]
-
-        return val
+        return [elm.as_python() for elm in self.value]
