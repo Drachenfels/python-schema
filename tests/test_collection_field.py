@@ -251,3 +251,37 @@ def test_cases_when_we_do_not_allow_nones():
     except exception.NormalisationError as err:
         assert schema.errors == ['None is not allowed value']
         assert str(err) == 'None is not allowed value'
+
+
+def test_collection_of_same_collection_works():
+    even_numbers_collection = field.CollectionField(
+        'even_numbers',
+        type_=field.IntField(
+            'individual_number', validators=[
+                lambda val: (
+                    f"Number is not even, got {val}" if val % 2 else True
+                )
+            ]
+        ),
+        validators=[
+            lambda val: (
+                True if len(val) > 1 else
+                f"List has to be at least 2 elements long, got {len(val)}"
+            )
+        ],
+    )
+
+    master_collection = field.CollectionField(
+        'series_of_even_numbers',
+        type_=even_numbers_collection
+    )
+
+    master_collection.loads([
+        [2, 4, 6],
+        [12, 18, 22]
+    ])
+
+    assert master_collection.dumps() == [
+        [2, 4, 6],
+        [12, 18, 22]
+    ]
