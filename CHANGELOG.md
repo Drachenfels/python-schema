@@ -3,14 +3,32 @@
 ---
 ## Planned
 
- * replace \*args, \*\*kwargs on child classes (like SchemaField) with properly
-   named arguments (if there is not too many of them)
- * add coverage
+Remaining missing elements of project in no particular order:
+
+ * add a way to mark certain fields as required + validation
+ * add test-coverage
  * make it possible to self-reference for schema and collections when
    performing loads (when object provides UUID, use it as identity check)
- * make sure that CollectionField might be lazy loaded as well and in general
-   behaves similar to SchemaField on that front
-
+ * make sure that defaults on SchemaField do work
+ * context manager to inject error message into SchemaField, ie. we check with
+   db for uniquness of user name and if it's not unique, then we mark
+   UserSchema as having error on username with message 'Username has to be
+   unique'
+ * support error codes, from github: 'When validation/parsing error is
+   generated under certain conditions it should be possible to generate stable
+   list of error codes for programmatic error handling'
+ * implement context, when performing dumps and/or loads we can mangle data to
+   take into account for example user and his/her timezone
+ * make sure that class kwargs are passed when we create instance of collection
+   and/or schema schema, right now we call make_new without actually passing
+   any kwargs or in some cases only some of them
+ * allow to use default value when loaded payload is None and we disallow None
+   values
+ * make sure that default value is working as expected, especially on schema
+   class, where we load with incomplete dictionary
+ * allow loads without arugments (default values will kick in), also make sure
+   that schema that contains other schema if we load without arugments
+   subschema will use default values (watch out for recursion)
 
 ---
 ## Release 0.4
@@ -21,24 +39,25 @@
  * lazy loading of other classes for cases when SchemaField is using itself as a definition
  * CollectionField was upgraded to allow lazy load as well
 
- - test case for SchemaField with two parents that override each other's attributes
- - test case for CollectionField with SchemaField in it
- - if we disallow Nones and Nones comes and we have default, should we or should not use that default? (tend to think we should use default but only if another flag attribute default-when-none is set to True (default is False), otherwise default is only in use when we perform explicit loads without arguments)
- - default values for SchemaField
- - test case for SchemaField using CollectionField with SchemaFields
- - test case for SchemaField inside of SchemaField (user with many addresses)
- - allow to perform loads without arguments (it will make default truly usable)
- - test case for using default values (for simple and complex fields)
- - when dealing with defauls, make sure no recurssion will happen when we have schema of each other and both have some sane defaults
- - there is no fields on schema, there is either very good reason for that or we need to put it back, it's confusing when and how fields are defined, what should happen is that we validate that fields is not empty
- - there is no way to set description, validators or allow_none on schema as it is right now
- - possibly makes sense to put all the values like validators/default/etc to be part of own configuration
-
 ---
 ## Release 0.3
+
+### Core
+
+ * add StrField
+ * add CollectionField
 
 ---
 ## Release 0.2
 
+### Core
+
+ * add IntField
+
 ---
 ## Release 0.1
+
+### Core
+
+ * add BaseField
+ * allow basic validation of given fields
