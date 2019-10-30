@@ -49,7 +49,7 @@ setup(
         'Drachenfels <drachenfels@protonmail.com>'
     ),
     author_email=(
-        "dariusz.wiatrak@essenceglobal.com, "
+        'drachenfels@protonmail.com'
     ),
     install_requires=requirements,
     include_package_data=True,

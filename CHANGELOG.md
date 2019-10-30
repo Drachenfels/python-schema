@@ -39,6 +39,12 @@ Remaining missing elements of project in no particular order:
  * lazy loading of other classes for cases when SchemaField is using itself as a definition
  * CollectionField was upgraded to allow lazy load as well
 
+## Release 0.4.1
+
+### Misc
+
+ * Update email of author
+
 ---
 ## Release 0.3
 
