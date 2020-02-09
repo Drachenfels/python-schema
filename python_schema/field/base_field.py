@@ -165,6 +165,7 @@ class BaseField:  # pylint: disable=too-many-instance-attributes
         """Field returns python valid data (ie datetime stays as a datatime)
         """
         return self.value
+
     @property
     def is_set(self):
         return self._value is not misc.NotSet

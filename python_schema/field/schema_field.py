@@ -9,8 +9,9 @@ class SchemaField(BaseField):
     # throw exception if loads receives unexpected key, otherwise ignore
     # silently
     exception_on_unknown = True
+
+    # list of fields that this schema defines
     fields = None
-    schema = None  # allows lazy load and inline definition
 
     # state:
 
@@ -18,46 +19,22 @@ class SchemaField(BaseField):
     # between, is set automatically during materailisation
     _computed_fields = None
 
-    def __init__(
-            self, name=None, schema=None, fields=None,
-            exception_on_unknown=None, **kwargs):  # NOQA
+    def __init__(self, name=None, exception_on_unknown=None, **kwargs):
         """Initialises new instance of the Schema.
 
-        name - optional name for the schema if not given it will be taken from
-            __class__.__name__ what is usually enough but if class Schema is
-            created `inline` probably makes sense to override it
-
-        class_ - class of schema field, should only be in use when lazy loading
-
-        fields - optional list of fields that should be added to this schema,
-            allows to modyfy on the fly content of SchemaField
+        name - name that should override default in form of __class__.__name__
         """
-        # name is mandatory, but SchemaField is a class and as such we
-        # can take class name as a name
-        if name is None:
-            name = self.__class__.__name__
+        name = name if name else self.__class__.__name__
 
         super().__init__(name, **kwargs)
 
         if self.fields is None:
             self.fields = []
 
-        # this allows to set or override any fields defined on schema
-        if fields:
-            base_fields = {field.name: field for field in self.fields}
-
-            base_fields.update({
-                field.name: field for field in fields
-            })
-
-            self.fields = list(base_fields.values())
-
         self.exception_on_unknown = (
             (True if self.exception_on_unknown is True else False)
             if exception_on_unknown is None else exception_on_unknown
         )
-
-        self.schema = self.__class__ if schema is None else schema
 
     def materialise(self):
         if isinstance(self.schema, str):
