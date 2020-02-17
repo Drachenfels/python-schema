@@ -211,9 +211,6 @@ class BaseField:  # pylint: disable=too-many-instance-attributes
         """
         self._materialised = True
 
-    def _loads(self, payload):
-        self.value = payload
-
     def loads(self, payload):
         self.reset_state()
 
@@ -224,12 +221,7 @@ class BaseField:  # pylint: disable=too-many-instance-attributes
 
         self.validate(payload)
 
-        if payload is None:
-            self.value = payload
-
-            return
-
-        self._loads(payload)
+        self.value = payload
 
     def dumps(self):
         return self.as_json()
