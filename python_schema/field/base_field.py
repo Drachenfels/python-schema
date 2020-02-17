@@ -70,9 +70,9 @@ class BaseField:  # pylint: disable=too-many-instance-attributes
         return self.value == other
 
     def __str__(self):
-        value = self.computed_value
-
-        if value is misc.NotSet:
+        try:
+            value = self.value
+        except exception.ReadValueError:
             value = 'NotSet'
 
         return (
@@ -177,13 +177,6 @@ class BaseField:  # pylint: disable=too-many-instance-attributes
     @property
     def is_materialised(self):
         return self._materialised
-
-    @property
-    def computed_value(self):
-        try:
-            return self.value
-        except exception.ReadValueError:
-            return misc.NotSet
 
     @property
     def value(self):
