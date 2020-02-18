@@ -41,6 +41,29 @@ def test_we_can_access_all_the_fields_on_class_and_its_ancestors():
     assert fields['superpower'].name == 'superpower'
 
 
+def test_typical_schema_usage():
+    """Simple case is that SchemaField is a dictionary of various values
+    """
+    class User(field.SchemaField):
+        fields = [
+            field.StrField('username'),
+            field.StrField('password'),
+            field.IntField('number_of_posts')
+        ]
+
+    instance = User()
+
+    instance.loads({
+        'username': 'Drachenfels',
+        'password': 'secretpassword',
+        'number_of_posts': '13',
+    })
+
+    assert instance.value['username'] == 'Drachenfels'
+    assert instance.value['password'] == 'secretpassword'
+    assert instance.value['number_of_posts'] == 13
+
+
 # class Address(field.SchemaField):
 #     fields = [
 #         field.StrField('postcode'),
@@ -92,29 +115,6 @@ def test_we_can_access_all_the_fields_on_class_and_its_ancestors():
 #     ]
 
 
-# def test_typical_schema_usage():
-#     """Simple case is that SchemaField is a dictionary of various values
-#     """
-#     class User(field.SchemaField):
-#         fields = [
-#             field.StrField('username'),
-#             field.StrField('password'),
-#             field.IntField('number_of_posts')
-#         ]
-#
-#     instance = User()
-#
-#     instance.loads({
-#         'username': 'Drachenfels',
-#         'password': 'secretpassword',
-#         'number_of_posts': '13',
-#     })
-#
-#     assert instance.fields['username'] == 'Drachenfels'
-#     assert instance.fields['password'] == 'secretpassword'
-#     assert instance.fields['number_of_posts'] == 13
-#
-#
 # def test_if_we_can_keep_track_friends():
 #     """User has name and friends, friends objects themselves are of class User.
 #     """

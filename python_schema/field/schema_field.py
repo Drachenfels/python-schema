@@ -77,7 +77,7 @@ class SchemaField(BaseField):
 
         if self.exception_on_unknown:
             unknown_keys = set(value.keys()).difference(
-                set(self._computed_fields.keys()))
+                set(self.get_all_fields().keys()))
 
             if unknown_keys:
                 message = "Unexpected payload with key(s): {}".format(
@@ -145,8 +145,8 @@ class SchemaField(BaseField):
     def loads(self, payload):
         self.reset_state()
 
-        if not self.is_materialised:
-            self.materialise()
+        # if not self.is_materialised:
+        #     self.materialise()
 
         payload = self.normalise(payload)
 
@@ -157,17 +157,15 @@ class SchemaField(BaseField):
 
             return
 
-        schema = {}
+        self.value = {}
 
-        for key, field in self._computed_fields.items():
-            schema[key] = field.make_new()
+        for key, field in self.get_all_fields().items():
+            self.value[key] = field.make_new()
 
             if key in payload:
-                schema[key].loads(payload[key])
+                self.value[key].loads(payload[key])
 
-            schema[key].parent = self
-
-        self.value = schema
+            self.value[key].parent = self
 
     def __str__(self):
         prefix = '\t' * self.total_parents
