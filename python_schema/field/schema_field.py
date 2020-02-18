@@ -106,9 +106,6 @@ class SchemaField(BaseField):
     def loads(self, payload):
         self.reset_state()
 
-        # if not self.is_materialised:
-        #     self.materialise()
-
         payload = self.normalise(payload)
 
         self.validate(payload)

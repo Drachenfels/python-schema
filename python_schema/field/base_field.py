@@ -14,7 +14,6 @@ class BaseField:  # pylint: disable=too-many-instance-attributes
     parent = None
     errors = None
     _value = misc.NotSet
-    _materialised = False
 
     def __init__(
             self, name, description=None, validators=None, allow_none=None,
@@ -175,10 +174,6 @@ class BaseField:  # pylint: disable=too-many-instance-attributes
         return self.default_value is not misc.NotSet
 
     @property
-    def is_materialised(self):
-        return self._materialised
-
-    @property
     def value(self):
         if self.is_set:
             return self._value
@@ -197,18 +192,8 @@ class BaseField:  # pylint: disable=too-many-instance-attributes
     def value(self):
         self._value = misc.NotSet
 
-    def materialise(self):
-        """Set field as `materialised`, materialisation happens when we perform
-        first time .loads. Thus is perfect for lazy loading and computation
-        heavy operations.
-        """
-        self._materialised = True
-
     def loads(self, payload):
         self.reset_state()
-
-        if not self.is_materialised:
-            self.materialise()
 
         payload = self.normalise(payload)
 

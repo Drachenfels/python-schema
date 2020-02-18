@@ -4,9 +4,6 @@ from .base_field import BaseField
 
 
 class CollectionField(BaseField):
-    # after materialisation collection will consist elements of this typer
-    _computed_type= None
-
     def __init__(self, name, type_, *args, **kwargs):
         super().__init__(name, *args, **kwargs)
 
@@ -40,19 +37,6 @@ class CollectionField(BaseField):
 
         return kwargs
 
-    def materialise(self):
-        if isinstance(self.type_, str):
-            instance = misc.ImportModule(self.type_).get_class()(
-                name=self.name)
-        elif isinstance(self.type_, type):
-            instance = self.type_(name=self.name)
-        else:
-            instance = self.type_
-
-        self._computed_type = instance
-
-        super().materialise()
-
     def _loads(self, payload):
         collection = []
         normalisation_errors = {}
@@ -61,7 +45,7 @@ class CollectionField(BaseField):
         for idx, val in enumerate(payload):
             name = f"{self.name}[{idx}]"
 
-            instance = self._computed_type.make_new(name=name)
+            instance = self.type_.make_new(name=name)
 
             try:
                 instance.loads(val)
