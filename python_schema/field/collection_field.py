@@ -80,9 +80,9 @@ class CollectionField(BaseField):
         validation_errors = {}
 
         for idx, val in enumerate(payload):
-            name = f"{self.name}[{idx}]"
+            instance = self.field_type.make_new()
 
-            instance = self.field_type.make_new(name=name)
+            instance.name += f'[{idx}]'
 
             try:
                 instance.loads(val)
