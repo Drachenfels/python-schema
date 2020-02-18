@@ -29,6 +29,11 @@ class ValidationError(PayloadError):
     """
 
 
+class RequiredFieldError(ValidationError):
+    """Exception happens when field is required but not provided on loading.
+    """
+
+
 class NoneNotAllowedError(NormalisationError):
     """Normalisation error when object is fed with None but it's not allowed
     value.

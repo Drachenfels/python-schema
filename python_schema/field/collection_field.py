@@ -35,6 +35,9 @@ class CollectionField(BaseField):
                 "CollectionField requires to have field_type to be not None"
             )
 
+    def is_collection(self):
+        return True
+
     def normalise(self, value):
         value = super().normalise(value)
 
@@ -56,8 +59,8 @@ class CollectionField(BaseField):
 
         return value
 
-    def get_core_attributes(self):
-        return super().get_core_attributes() + ['field_type']
+    def get_configuration_attributes(self):
+        return super().get_configuration_attributes() + ['field_type']
 
     def loads(self, payload):
         self.reset_state()

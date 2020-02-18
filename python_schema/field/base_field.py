@@ -109,18 +109,40 @@ class BaseField:  # pylint: disable=too-many-instance-attributes
         them. This solves problem of object being shared between different
         instance of CollectionField or SchemaField.
         """
+        attr = self.get_configuration_attributes()
+
         new_kwargs = {
-            name: getattr(self, name) for name in self.get_core_attributes()
+            name: getattr(self, name) for name in attr
         }
 
         return self.__class__(**new_kwargs)
+
+    def get_possible_required_fields(self):
+        return [self.name]
+
+    @property
+    def is_collection(self):
+        return False
+
+    @property
+    def is_schema(self):
+        return False
+
+    def get_canonical_name(self):
+        bits = []
+
+        if self.parent:
+            bits.append(self.parent.get_canonical_name())
+
+        bits.append(self.name)
+
+        return '.'.join(bits)
 
     def reset_state(self):
         """Reset field to base state (before first `.loads`).
         """
         self.value = misc.NotSet
         self.errors = []
-        self.parent = None
 
     def insist_not_none_or_none_allowed(self, value):
         if value is not None:
@@ -174,6 +196,9 @@ class BaseField:  # pylint: disable=too-many-instance-attributes
         """Field returns python valid data (ie datetime stays as a datatime)
         """
         return self.value
+
+    def get_required_fields(self):
+        return None
 
     @property
     def is_set(self):

@@ -11,7 +11,12 @@ class SchemaField(BaseField):
     # list of fields that this schema defines
     fields = None
 
-    def __init__(self, name=None, exception_on_unknown=None, **kwargs):
+    # list of required fields, if any
+    required = None
+
+    def __init__(
+            self, name=None, exception_on_unknown=None, required=None,
+            **kwargs):
         """Initialises new instance of the Schema.
 
         name - name that should override default in form of __class__.__name__
@@ -26,6 +31,11 @@ class SchemaField(BaseField):
         self.exception_on_unknown = (
             (True if self.exception_on_unknown is True else False)
             if exception_on_unknown is None else exception_on_unknown
+        )
+
+        self.required = (
+            ([] if self.required is None else self.required)
+            if required is None else required
         )
 
     def normalise(self, value):
@@ -48,9 +58,57 @@ class SchemaField(BaseField):
 
         return value
 
-    def get_core_attributes(self):
-        return super().get_core_attributes() + [
-            'fields', 'exception_on_unknown']
+    def get_configuration_attributes(self):
+        return super().get_configuration_attributes() + [
+            'exception_on_unknown', 'required']
+
+    def _check_if_field_exists(self, name):
+        name_bits = name.split('.')
+        fields = self.get_all_fields()
+
+        for name in name_bits:
+            if name not in fields:
+                raise exception.UnknownFieldError()
+
+            field = fields[name]
+
+            fields = getattr(field, 'get_all_fields', lambda: {})()
+
+    def get_possible_required_fields():
+        possible_fields = []
+
+        for name, field in self.get_all_fields():
+            possible_fields += field.get_possible_required_fields()
+
+        return possible_fields
+
+    def get_required_fields(self):
+        if not self.required:
+            return []
+
+        req_fields = []
+
+        for name in self.required:
+            try:
+                self._check_if_field_exists(name)
+            except exception.UnknownFieldError:
+                raise exception.UnknownFieldError(
+                    f"Field {name} is required, "
+                    f"but it does not exist on schema."
+                )
+
+            bits = []
+
+            if self.parent:
+                bits.append(self.name)
+
+            bits.append(name)
+
+            req_fields.append('.'.join(bits))
+
+        req_fields.sort()
+
+        return req_fields
 
     def get_all_fields(self):
         """Returns all the fields that this class and it's super-class(es).
@@ -66,19 +124,15 @@ class SchemaField(BaseField):
         class B(A):
             fields = ['c']
 
-        vs
+        vs (incomlete example)
 
         class A:
-            fields = ['a', 'b']
-
             def get_all_fields(self):
-                return self.fields
+                return ['a', 'b']
 
         class B(A):
-            fields = ['c']
-
             def get_all_felds(self):
-                reutrn super().get_all_felds() + self.fields
+                return super().get_all_felds() + ['c']
         """
         all_fields = {}
 
@@ -120,15 +174,35 @@ class SchemaField(BaseField):
 
             return
 
+        required_fields = self.get_required_fields()
+
+        print(required_fields)
+
         self.value = {}
 
         for key, field in self.get_all_fields().items():
             self.value[key] = field.make_new()
 
+            self.value[key].parent = self
+
             if key in payload:
                 self.value[key].loads(payload[key])
 
-            self.value[key].parent = self
+                name = self.value[key].get_canonical_name()
+
+                print(" -> ", name)
+
+                if name in required_fields:
+                    required_fields.pop(required_fields.index(name))
+
+        print(required_fields)
+
+        if required_fields:
+            raise exception.RequiredFieldError(
+                "Some required fields are not provided, missing: {}".format(
+                    ", ".join(required_fields)
+                )
+            )
 
     def __str__(self):
         prefix = '\t' * self.total_parents
