@@ -4,8 +4,6 @@ from .base_field import BaseField
 
 
 class SchemaField(BaseField):
-    # configuration:
-
     # throw exception if loads receives unexpected key, otherwise ignore
     # silently
     exception_on_unknown = True
@@ -50,14 +48,9 @@ class SchemaField(BaseField):
 
         return value
 
-    def update_defaults(self, **kwargs):
-        kwargs = super().update_defaults(**kwargs)
-
-        kwargs.setdefault('schema', self.schema)
-        kwargs.setdefault('fields', self.fields)
-        kwargs.setdefault('exception_on_unknown', self.exception_on_unknown)
-
-        return kwargs
+    def get_core_attributes(self):
+        return super().get_core_attributes() + [
+            'fields', 'exception_on_unknown']
 
     def get_all_fields(self):
         """Returns all the fields that this class and it's super-class(es).

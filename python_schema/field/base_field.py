@@ -93,17 +93,27 @@ class BaseField:  # pylint: disable=too-many-instance-attributes
 
         return counter
 
-    def update_defaults(self, **kwargs):
-        kwargs.setdefault('name', self.name)
-        kwargs.setdefault('description', self.description)
-        kwargs.setdefault('validators', self.validators)
-        kwargs.setdefault('allow_none', self.allow_none)
-        kwargs.setdefault('default_value', self.default_value)
+    def get_configuration_attributes(self):
+        return [
+            'name', 'description', 'validators', 'allow_none', 'default_value'
+        ]
 
-        return kwargs
+    def make_new(self):
+        """Create new instance of same class.
 
-    def make_new(self, **kwargs):
-        return self.__class__(**self.update_defaults(**kwargs))
+        Each Filed of python_schema behaves like a factory object. We define
+        field_type CollectionField or fields on SchemaField as instance of
+        prototype with complete configuration. When new data is loaded to those
+        fields (and possibly more in the future) we create new instance being
+        complete replica of given base field but with new values assigned to
+        them. This solves problem of object being shared between different
+        instance of CollectionField or SchemaField.
+        """
+        new_kwargs = {
+            name: getattr(self, name) for name in self.get_core_attributes()
+        }
+
+        return self.__class__(**new_kwargs)
 
     def reset_state(self):
         """Reset field to base state (before first `.loads`).

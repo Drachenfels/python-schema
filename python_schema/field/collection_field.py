@@ -56,12 +56,8 @@ class CollectionField(BaseField):
 
         return value
 
-    def update_defaults(self, **kwargs):
-        kwargs = super().update_defaults(**kwargs)
-
-        kwargs.setdefault('field_type', self.field_type)
-
-        return kwargs
+    def get_core_attributes(self):
+        return super().get_core_attributes() + ['field_type']
 
     def loads(self, payload):
         self.reset_state()
@@ -150,8 +146,7 @@ class CollectionField(BaseField):
         return len(self.value)
 
     def as_json(self):
-        val = self.get_final_value()
-        if self.get_final_value() is None:
+        if self.value is None:
             return None
 
         return [elm.as_json() for elm in self.value]
