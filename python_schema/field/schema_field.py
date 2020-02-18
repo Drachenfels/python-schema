@@ -13,12 +13,6 @@ class SchemaField(BaseField):
     # list of fields that this schema defines
     fields = None
 
-    # state:
-
-    # computed_fields takes into account parents, overrides and everything in
-    # between, is set automatically during materailisation
-    _computed_fields = None
-
     def __init__(self, name=None, exception_on_unknown=None, **kwargs):
         """Initialises new instance of the Schema.
 
@@ -35,39 +29,6 @@ class SchemaField(BaseField):
             (True if self.exception_on_unknown is True else False)
             if exception_on_unknown is None else exception_on_unknown
         )
-
-    def materialise(self):
-        if isinstance(self.schema, str):
-            schema = misc.ImportModule(self.schema).get_class()
-        elif isinstance(self.schema, SchemaField):
-            schema = self.schema.__class__
-        else:
-            schema = self.schema
-
-        self._computed_fields = {}
-
-        for field in self.fields:
-            if field.name in self._computed_fields:
-                continue
-
-            self._computed_fields[field.name] = field.make_new(
-                name=field.name)
-
-        # reads all parents and adds all parents fields to our list of fields
-        for ancestor in schema.mro()[:-1]:
-            fields = getattr(ancestor, 'fields', None)
-
-            if not fields:
-                continue
-
-            for field in fields:
-                if field.name in self._computed_fields:
-                    continue
-
-                self._computed_fields[field.name] = field.make_new(
-                    name=field.name)
-
-        super().materialise()
 
     def normalise(self, value):
         value = super().normalise(value)
@@ -198,7 +159,7 @@ class SchemaField(BaseField):
 
         local_keys = set([
             key for key, field in self.value.items()
-            if field.computed_value is not misc.NotSet
+            if field._value is not misc.NotSet
         ])
 
         if set(dct.keys()).symmetric_difference(local_keys):
@@ -232,7 +193,7 @@ class SchemaField(BaseField):
         return self.value.items()
 
     def __getitem__(self, key):
-        if key not in self._computed_fields:
+        if key not in self.value:
             raise exception.ReadValueError(f"Schema has no field {key}")
 
         return self.value[key]
