@@ -96,9 +96,21 @@ class SchemaField(BaseField):
                 continue
 
             for field in fields:
+                if isinstance(field, type):
+                    raise exception.SchemaConfigurationError(
+                        f"Field {field} at {self.name}(SchemaField) is not "
+                        "an instance"
+                    )
+
                 all_fields[field.name] = field
 
         for field in self.fields:
+            if isinstance(field, type):
+                raise exception.SchemaConfigurationError(
+                    f"Field {field} at {self.name}(SchemaField) is not "
+                    "an instance"
+                )
+
             all_fields[field.name] = field
 
         return all_fields

@@ -114,6 +114,38 @@ def test_if_we_can_keep_track_friends():
     ) == 'Meg'
 
 
+def test_make_sure_that_field_is_always_an_instance_on_schema():
+    """Simple case is that SchemaField is a dictionary of various values
+    """
+    class Address(field.SchemaField):
+        fields = [
+            field.StrField('postcode')
+        ]
+
+    class User(field.SchemaField):
+        fields = [
+            field.StrField('first_name'),
+            field.StrField('last_name'),
+            Address('home_address'),
+            Address,  # this should not work, causing exception
+            Address('office_address'),
+        ]
+
+    instance = User()
+
+    with pytest.raises(exception.SchemaConfigurationError):
+        instance.loads({
+            'username': 'Drachenfels',
+            'home_address': {
+                'postcode': 'W1B 3AG',
+            },
+            'office_address': {
+                'postcode': 'WC1A 1DD',
+            },
+        })
+
+
+
 # class Address(field.SchemaField):
 #     fields = [
 #         field.StrField('postcode'),
