@@ -98,7 +98,60 @@ class SchemaField(BaseField):
 
         return kwargs
 
-    def _loads(self, payload):
+    def get_all_fields(self):
+        """Returns all the fields that this class and it's super-class(es).
+
+        Using mro we combine 'fields' from every object instead being forced to
+        defined get_all_fields on each of sub-classes and calling super.
+
+        Compare:
+
+        class A:
+            fields = ['a', 'b']
+
+        class B(A):
+            fields = ['c']
+
+        vs
+
+        class A:
+            fields = ['a', 'b']
+
+            def get_all_fields(self):
+                return self.fields
+
+        class B(A):
+            fields = ['c']
+
+            def get_all_felds(self):
+                reutrn super().get_all_felds() + self.fields
+        """
+        all_fields = {}
+
+        for ancestor in self.__class__.mro()[:-1]:
+            fields = getattr(ancestor, 'fields', None)
+
+            if not fields:
+                continue
+
+            for field in fields:
+                all_fields[field.name] = field
+
+        for field in self.fields:
+            all_fields[field.name] = field
+
+        return all_fields
+
+    def loads(self, payload):
+        self.reset_state()
+
+        if not self.is_materialised:
+            self.materialise()
+
+        payload = self.normalise(payload)
+
+        self.validate(payload)
+
         if payload is None:
             self.value = None
 

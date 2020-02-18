@@ -6,6 +6,41 @@ import pytest
 from python_schema import field, exception
 
 
+def test_we_can_access_all_the_fields_on_class_and_its_ancestors():
+    """Simple case is that SchemaField is a dictionary of various values
+    """
+    class Human(field.SchemaField):
+        fields = [
+            field.IntField('age'),
+            field.StrField('name'),
+        ]
+
+    class Teenager(Human):
+        fields = [
+            field.StrField('hobby'),
+        ]
+
+    class Pupil(Human):
+        fields = [
+            field.StrField('school'),
+        ]
+
+    class SuperHero(Pupil, Teenager):
+        fields = [
+            field.StrField('superpower'),
+        ]
+
+    instance = SuperHero()
+
+    fields = instance.get_all_fields()
+
+    assert fields['name'].name == 'name'
+    assert fields['age'].name == 'age'
+    assert fields['hobby'].name == 'hobby'
+    assert fields['school'].name == 'school'
+    assert fields['superpower'].name == 'superpower'
+
+
 # class Address(field.SchemaField):
 #     fields = [
 #         field.StrField('postcode'),
@@ -57,28 +92,53 @@ from python_schema import field, exception
 #     ]
 
 
-def test_typical_schema_usage():
-    """Simple case is that SchemaField is a dictionary of various values
-    """
-    class User(field.SchemaField):
-        fields = [
-            field.StrField('username'),
-            field.StrField('password'),
-            field.IntField('number_of_posts')
-        ]
-
-    instance = User()
-
-    instance.loads({
-        'username': 'Drachenfels',
-        'password': 'secretpassword',
-        'number_of_posts': '13',
-    })
-
-    assert instance.fields['username'] == 'Drachenfels'
-    assert instance.fields['password'] == 'secretpassword'
-    assert instance.fields['number_of_posts'] == 13
-
+# def test_typical_schema_usage():
+#     """Simple case is that SchemaField is a dictionary of various values
+#     """
+#     class User(field.SchemaField):
+#         fields = [
+#             field.StrField('username'),
+#             field.StrField('password'),
+#             field.IntField('number_of_posts')
+#         ]
+#
+#     instance = User()
+#
+#     instance.loads({
+#         'username': 'Drachenfels',
+#         'password': 'secretpassword',
+#         'number_of_posts': '13',
+#     })
+#
+#     assert instance.fields['username'] == 'Drachenfels'
+#     assert instance.fields['password'] == 'secretpassword'
+#     assert instance.fields['number_of_posts'] == 13
+#
+#
+# def test_if_we_can_keep_track_friends():
+#     """User has name and friends, friends objects themselves are of class User.
+#     """
+#     class User(field.SchemaField):
+#         fields = [
+#             field.StrField('name'),
+#             field.CollectionField('friends', type_=field.LazyField('User')),
+#         ]
+#
+#     instance = User()
+#
+#     instance.loads({
+#         'name': 'John',
+#         'friends': [{
+#             'name': 'Emma',
+#             'friends': [{
+#                 'name': 'John',
+#             }, {
+#                 'name': 'Emily',
+#             }, {
+#                 'name': 'Dan',
+#             }]
+#         }],
+#     })
 
 
 # def test_binary_tree_like_structure():
