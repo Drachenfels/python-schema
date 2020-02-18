@@ -6,6 +6,16 @@ import pytest
 from python_schema import field, exception
 
 
+# this one has to be exposed to be lazy-loadable by one of the tests
+class UserWithBestFriend(field.SchemaField):
+    fields = [
+        field.StrField('name'),
+        field.LazyField(
+            'the_best_friend',
+            load='tests.test_schema_field.UserWithBestFriend'),
+    ]
+
+
 def test_we_can_access_all_the_fields_on_class_and_its_ancestors():
     """Simple case is that SchemaField is a dictionary of various values
     """
@@ -64,6 +74,46 @@ def test_typical_schema_usage():
     assert instance.value['number_of_posts'] == 13
 
 
+def test_if_we_can_keep_track_friends():
+    """User has name and the_best_friend, each friend is User object and as
+    such can have the_best_friend as well. For simplicity we do not expect that
+    the_best_friend is mutual feeling.
+    """
+    instance = UserWithBestFriend()
+
+    # John's best friend is Emily, her's best friend is Meg and Meg is unlucky
+    # to have none
+    instance.loads({
+        'name': 'John',
+        'the_best_friend': {
+            'name': 'Emily',
+            'the_best_friend': {
+                'name': 'Meg',
+            }
+        }
+    })
+
+    assert instance.value['name'] == 'John'
+    assert instance.value['the_best_friend'] == {
+        'name': 'Emily',
+        'the_best_friend': {
+            'name': 'Meg',
+        }
+    }
+
+    assert instance.value['the_best_friend'].value['name'] == 'Emily'
+    assert instance.value['the_best_friend'].value['the_best_friend'] == {
+        'name': 'Meg'
+    }
+
+    assert (
+        instance
+            .value['the_best_friend']
+            .value['the_best_friend']
+            .value['name']
+    ) == 'Meg'
+
+
 # class Address(field.SchemaField):
 #     fields = [
 #         field.StrField('postcode'),
@@ -115,30 +165,6 @@ def test_typical_schema_usage():
 #     ]
 
 
-# def test_if_we_can_keep_track_friends():
-#     """User has name and friends, friends objects themselves are of class User.
-#     """
-#     class User(field.SchemaField):
-#         fields = [
-#             field.StrField('name'),
-#             field.CollectionField('friends', type_=field.LazyField('User')),
-#         ]
-#
-#     instance = User()
-#
-#     instance.loads({
-#         'name': 'John',
-#         'friends': [{
-#             'name': 'Emma',
-#             'friends': [{
-#                 'name': 'John',
-#             }, {
-#                 'name': 'Emily',
-#             }, {
-#                 'name': 'Dan',
-#             }]
-#         }],
-#     })
 
 
 # def test_binary_tree_like_structure():

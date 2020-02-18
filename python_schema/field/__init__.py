@@ -3,3 +3,4 @@ from .int_field import IntField  # NOQA
 from .str_field import StrField  # NOQA
 from .collection_field import CollectionField  # NOQA
 from .schema_field import SchemaField  # NOQA
+from .lazy_field import LazyField  # NOQA
