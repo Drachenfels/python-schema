@@ -4,10 +4,28 @@ from .base_field import BaseField
 
 
 class CollectionField(BaseField):
-    def __init__(self, name, type_, *args, **kwargs):
-        super().__init__(name, *args, **kwargs)
+    def __init__(self, name, field_type, **kwargs):
+        """CollectionField as name suggest is a collection of other
+        python-schema fields.
 
-        self.type_ = type_
+            name :: mandatory name of this field
+
+            field_type :: instance of the python-schema field that should be
+                used as a template for consecutive elements of the collection
+
+            kwargs :: remaining configuration options that super-class
+                `BaseField` defines
+
+        """
+        super().__init__(name, **kwargs)
+
+        if isinstance(field_type, type):
+            raise exception.SchemaConfigurationError(
+                f'CollectionField requires that argument field_type is an '
+                f'instance and not type, got {field_type}'
+            )
+
+        self.field_type = field_type
 
     def normalise(self, value):
         value = super().normalise(value)
@@ -33,11 +51,22 @@ class CollectionField(BaseField):
     def update_defaults(self, **kwargs):
         kwargs = super().update_defaults(**kwargs)
 
-        kwargs.setdefault('type_', self.type_)
+        kwargs.setdefault('field_type', self.field_type)
 
         return kwargs
 
-    def _loads(self, payload):
+    def loads(self, payload):
+        self.reset_state()
+
+        payload = self.normalise(payload)
+
+        self.validate(payload)
+
+        if payload is None:
+            self.value = None
+
+            return
+
         collection = []
         normalisation_errors = {}
         validation_errors = {}
@@ -45,7 +74,7 @@ class CollectionField(BaseField):
         for idx, val in enumerate(payload):
             name = f"{self.name}[{idx}]"
 
-            instance = self.type_.make_new(name=name)
+            instance = self.field_type.make_new(name=name)
 
             try:
                 instance.loads(val)
@@ -92,7 +121,7 @@ class CollectionField(BaseField):
             f'<CollectionField({self.name}=[',
         ]
 
-        value = self.computed_value
+        value = self.get_final_value()
 
         if value is misc.NotSet:
             value = ['NotSet']
@@ -113,7 +142,8 @@ class CollectionField(BaseField):
         return len(self.value)
 
     def as_json(self):
-        if self.value is None:
+        val = self.get_final_value()
+        if self.get_final_value() is None:
             return None
 
         return [elm.as_json() for elm in self.value]
