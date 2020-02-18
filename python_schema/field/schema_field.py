@@ -95,7 +95,7 @@ class SchemaField(BaseField):
             if not fields:
                 continue
 
-            for field in fields:
+            for field in fields:  # NOQA
                 if isinstance(field, type):
                     raise exception.SchemaConfigurationError(
                         f"Field {field} at {self.name}(SchemaField) is not "
@@ -144,14 +144,14 @@ class SchemaField(BaseField):
             f'<SchemaField({self.name}={{',
         ]
 
-        value = self.computed_value
+        value = self.get_final_value()
 
         if value is misc.NotSet:
             output.append(f'{prefix}\tNotSet')
             value = {}
 
-        for key, value in value.items():
-            output.append(f'{prefix}\t{key}: {value}')
+        for key, val in value.items():
+            output.append(f'{prefix}\t{key}: {val}')
 
         output.append(
             f'{prefix}}})>'
@@ -166,10 +166,10 @@ class SchemaField(BaseField):
                 "(missing implementation of .items() and .keys())"
             )
 
-        local_keys = set([
+        local_keys = {
             key for key, field in self.value.items()
-            if field._value is not misc.NotSet
-        ])
+            if field.get_final_value() is not misc.NotSet
+        }
 
         if set(dct.keys()).symmetric_difference(local_keys):
             return False
@@ -207,30 +207,31 @@ class SchemaField(BaseField):
 
         return self.value[key]
 
-    def as_json(self):
+    def _get_non_empty_fields(self):
         if self.value is None:
             return None
 
-        output = {}
+        return [
+            (key, field) for key, field in self.value.items()
+            if field.get_final_value() is not misc.NotSet
+        ]
 
-        for key, field in self.value.items():
-            if field.computed_value is misc.NotSet:
-                continue
+    def as_json(self):
+        fields = self._get_non_empty_fields()
 
-            output[key] = field.as_json()
+        if fields is None:
+            return None
 
-        return output
+        return {
+            key: field.as_json() for key, field in fields
+        }
 
     def as_python(self):
-        if self.value is None:
+        fields = self._get_non_empty_fields()
+
+        if fields is None:
             return None
 
-        output = {}
-
-        for key, field in self.value.items():
-            if field.computed_value is misc.NotSet:
-                continue
-
-            output[key] = field.as_python()
-
-        return output
+        return {
+            key: field.as_python() for key, field in fields
+        }

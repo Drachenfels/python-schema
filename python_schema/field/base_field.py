@@ -173,8 +173,23 @@ class BaseField:  # pylint: disable=too-many-instance-attributes
     def is_default_value_set(self):
         return self.default_value is not misc.NotSet
 
+    def get_final_value(self):
+        """Method returns value that is either a) one that was set on object,
+        b) default that was provided for the field, c) misc.NotSet.
+        """
+        if self.is_set:
+            return self._value
+
+        if self.is_default_value_set:
+            return self.default_value
+
+        return misc.NotSet
+
     @property
     def value(self):
+        """Method throws an exception if no value nor default was provided for
+        the field.
+        """
         if self.is_set:
             return self._value
 
