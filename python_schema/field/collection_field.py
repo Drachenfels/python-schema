@@ -4,7 +4,9 @@ from .base_field import BaseField
 
 
 class CollectionField(BaseField):
-    def __init__(self, name, field_type, **kwargs):
+    field_type = None
+
+    def __init__(self, name, field_type=None, **kwargs):
         """CollectionField as name suggest is a collection of other
         python-schema fields.
 
@@ -19,13 +21,19 @@ class CollectionField(BaseField):
         """
         super().__init__(name, **kwargs)
 
-        if isinstance(field_type, type):
-            raise exception.SchemaConfigurationError(
-                f'CollectionField requires that argument field_type is an '
-                f'instance and not type, got {field_type}'
-            )
+        if field_type is not None:
+            if isinstance(field_type, type):
+                raise exception.SchemaConfigurationError(
+                    f'CollectionField requires that argument field_type is an '
+                    f'instance and not type, got {field_type}'
+                )
 
-        self.field_type = field_type
+            self.field_type = field_type
+
+        if self.field_type is None:
+            raise exception.SchemaConfigurationError(
+                "CollectionField requires to have field_type to be not None"
+            )
 
     def normalise(self, value):
         value = super().normalise(value)
