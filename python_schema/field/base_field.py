@@ -117,9 +117,6 @@ class BaseField:  # pylint: disable=too-many-instance-attributes
 
         return self.__class__(**new_kwargs)
 
-    def get_possible_required_fields(self):
-        return [self.name]
-
     @property
     def is_collection(self):
         return False

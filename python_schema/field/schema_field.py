@@ -74,14 +74,6 @@ class SchemaField(BaseField):
 
             fields = getattr(field, 'get_all_fields', lambda: {})()
 
-    def get_possible_required_fields():
-        possible_fields = []
-
-        for name, field in self.get_all_fields():
-            possible_fields += field.get_possible_required_fields()
-
-        return possible_fields
-
     def get_required_fields(self):
         if not self.required:
             return []
@@ -176,24 +168,7 @@ class SchemaField(BaseField):
 
         required_fields = self.get_required_fields()
 
-        print(required_fields)
-
-        self.value = {}
-
-        for key, field in self.get_all_fields().items():
-            self.value[key] = field.make_new()
-
-            self.value[key].parent = self
-
-            if key in payload:
-                self.value[key].loads(payload[key])
-
-                name = self.value[key].get_canonical_name()
-
-                print(" -> ", name)
-
-                if name in required_fields:
-                    required_fields.pop(required_fields.index(name))
+        # payload_fields = self.get_payload_fields(payload)
 
         print(required_fields)
 
@@ -203,6 +178,21 @@ class SchemaField(BaseField):
                     ", ".join(required_fields)
                 )
             )
+
+        __import__('ipdb').set_trace()
+
+        self.value = {}
+
+        for key, field in self.get_all_fields().items():
+            self.value[key] = field.make_new()
+
+            self.value[key].parent = self
+
+            print(key)
+
+            if key in payload:
+                self.value[key].loads(payload[key])
+
 
     def __str__(self):
         prefix = '\t' * self.total_parents
