@@ -98,7 +98,7 @@ class BaseField:  # pylint: disable=too-many-instance-attributes
             'name', 'description', 'validators', 'allow_none', 'default_value'
         ]
 
-    def make_new(self):
+    def make_new(self, parent=None):
         """Create new instance of same class.
 
         Each Filed of python_schema behaves like a factory object. We define
@@ -115,7 +115,11 @@ class BaseField:  # pylint: disable=too-many-instance-attributes
             name: getattr(self, name) for name in attr
         }
 
-        return self.__class__(**new_kwargs)
+        instance = self.__class__(**new_kwargs)
+
+        instance.parent = parent
+
+        return instance
 
     @property
     def is_collection(self):

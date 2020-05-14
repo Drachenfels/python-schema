@@ -1,6 +1,6 @@
 TEST ?= tests
 
 tests:
-	./bin/run-tests.sh $(TEST)
+	pytest -sv $(TEST)
 
 .PHONY: tests

@@ -50,15 +50,21 @@ def test_we_can_mark_specific_field_on_schema_as_required():
     assert required_fields[0] == 'first_name'
     assert required_fields[1] == 'last_name'
 
-    with pytest.raises(exception.RequiredFieldError):
+    with pytest.raises(exception.RequiredFieldError) as err:
         instance.loads({
             'first_name': 'John',
         })
 
-    with pytest.raises(exception.RequiredFieldError):
+    assert (
+        'One or more required field is missing: last_name' == str(err.value))
+
+    with pytest.raises(exception.RequiredFieldError) as err:
         instance.loads({
             'last_name': 'Doe',
         })
+
+    assert (
+        'One or more required field is missing: first_name' == str(err.value))
 
     instance.loads({
         'first_name': 'Jane',
@@ -84,10 +90,14 @@ def test_we_can_mark_sub_schema_as_required_without_specifying_any_field():
     assert len(required_fields) == 1
     assert required_fields[0] == 'home_address'
 
-    with pytest.raises(exception.RequiredFieldError):
+    with pytest.raises(exception.RequiredFieldError) as err:
         instance.loads({
             'first_name': 'John',
         })
+
+    assert (
+        'One or more required field is missing: home_address' ==
+        str(err.value))
 
     instance.loads({
         'home_address': {
@@ -119,13 +129,14 @@ def test_we_can_mark_sub_schema_as_required_without_specifying_any_field():
     assert instance.value['home_address'].value['street_name'] == 'Hyde Park'
     assert instance.value['home_address'].value['city'] == 'London'
 
-    try:
+    with pytest.raises(exception.RequiredFieldError) as err:
         instance.loads({
             'last_name': 'Doe',
         })
-    except (exception.RequiredFieldError,) as err:
-        assert str(err) == (
-            'Some required fields are not provided, missing: home_address')
+
+    assert (
+        'One or more required field is missing: home_address' ==
+        str(err.value))
 
 
 def test_we_can_mark_specific_field_on_sub_schema_as_required():
@@ -146,13 +157,17 @@ def test_we_can_mark_specific_field_on_sub_schema_as_required():
     assert required_fields[1] == 'office_address.postcode'
 
     # missing home address and postcode on office address
-    with pytest.raises(exception.RequiredFieldError):
+    with pytest.raises(exception.RequiredFieldError) as err:
         instance.loads({
             'first_name': 'John',
         })
+
+    assert str(err.value) == (
+        'One or more required field is missing: '
+        'home_address, office_address.postcode')
 
     # missing postcode on office address
-    with pytest.raises(exception.RequiredFieldError):
+    with pytest.raises(exception.RequiredFieldError) as err:
         instance.loads({
             'first_name': 'John',
             'home_address': {
@@ -160,42 +175,25 @@ def test_we_can_mark_specific_field_on_sub_schema_as_required():
             },
         })
 
-    # check that message confirms exception
-    try:
-        instance.loads({
-            'first_name': 'John',
-            'home_address': {
-                'postcode': 'W1H 7EJ',
-            },
-        })
-    except (exception.RequiredFieldError,) as err:
-        assert str(err) == (
-            'Some required fields are not provided, '
-            'missing: office_address.postcode')
+    assert str(err.value) == (
+        'One or more required field is missing: '
+        'office_address.postcode')
 
     # missing home address
-    with pytest.raises(exception.RequiredFieldError):
+    with pytest.raises(exception.RequiredFieldError) as err:
         instance.loads({
             'office_address': {
                 'postcode': 'W1H 7EJ',
             },
         })
 
-    # check that message confirms exception
-    try:
-        instance.loads({
-            'office_address': {
-                'postcode': 'W1H 7EJ',
-            },
-        })
-    except (exception.RequiredFieldError,) as err:
-        assert str(err) == (
-            'Some required fields are not provided, '
-            'missing: home_address')
+    assert str(err.value) == (
+        'One or more required field is missing: '
+        'home_address')
 
     # we have some field on home address, but postcode on office address is
     # missing
-    with pytest.raises(exception.RequiredFieldError):
+    with pytest.raises(exception.RequiredFieldError) as err:
         instance.loads({
             'home_address': {
                 'postcode': 'W1H 7EJ',
@@ -205,18 +203,22 @@ def test_we_can_mark_specific_field_on_sub_schema_as_required():
             },
         })
 
-    # # this should work
-    # instance.loads({
-    #     'home_address': {
-    #         'city': 'London',
-    #     },
-    #     'office_address': {
-    #         'postcode': 'W1H 7EJ',
-    #     },
-    # })
-    #
-    # assert instance.value['home_address'].value['city'] == 'London'
-    # assert instance.value['office_address'].value['postcode'] == 'W1H 7EJ'
+    assert str(err.value) == (
+        'One or more required field is missing: '
+        'home_address')
+
+    # this should work
+    instance.loads({
+        'home_address': {
+            'city': 'London',
+        },
+        'office_address': {
+            'postcode': 'W1H 7EJ',
+        },
+    })
+
+    assert instance.value['home_address'].value['city'] == 'London'
+    assert instance.value['office_address'].value['postcode'] == 'W1H 7EJ'
 
 
 def test_we_can_mark_specific_field_on_two_sub_schema_as_required():

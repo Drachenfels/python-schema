@@ -62,45 +62,24 @@ class SchemaField(BaseField):
         return super().get_configuration_attributes() + [
             'exception_on_unknown', 'required']
 
-    def _check_if_field_exists(self, name):
-        name_bits = name.split('.')
-        fields = self.get_all_fields()
-
-        for name in name_bits:
-            if name not in fields:
-                raise exception.UnknownFieldError()
-
-            field = fields[name]
-
-            fields = getattr(field, 'get_all_fields', lambda: {})()
-
-    def get_required_fields(self):
+    def validate_required_fields(self, payload):
         if not self.required:
-            return []
+            return
 
-        req_fields = []
+        req_fields = [elm.split('.')[0] for elm in self.required]
 
-        for name in self.required:
-            try:
-                self._check_if_field_exists(name)
-            except exception.UnknownFieldError:
-                raise exception.UnknownFieldError(
-                    f"Field {name} is required, "
-                    f"but it does not exist on schema."
+        payload_fields = [] if payload is None else list(payload.keys())
+
+        not_provided = list(set(req_fields).difference(set(payload_fields)))
+
+        not_provided.sort()
+
+        if not_provided:
+            raise exception.RequiredFieldError(
+                "One or more required field is missing: {}".format(
+                    ", ".join(not_provided)
                 )
-
-            bits = []
-
-            if self.parent:
-                bits.append(self.name)
-
-            bits.append(name)
-
-            req_fields.append('.'.join(bits))
-
-        req_fields.sort()
-
-        return req_fields
+            )
 
     def get_all_fields(self):
         """Returns all the fields that this class and it's super-class(es).
@@ -161,38 +140,23 @@ class SchemaField(BaseField):
 
         self.validate(payload)
 
+        self.validate_required_fields(payload)
+
         if payload is None:
             self.value = None
 
             return
 
-        required_fields = self.get_required_fields()
-
-        # payload_fields = self.get_payload_fields(payload)
-
-        print(required_fields)
-
-        if required_fields:
-            raise exception.RequiredFieldError(
-                "Some required fields are not provided, missing: {}".format(
-                    ", ".join(required_fields)
-                )
-            )
-
-        __import__('ipdb').set_trace()
-
-        self.value = {}
+        values = {}
 
         for key, field in self.get_all_fields().items():
-            self.value[key] = field.make_new()
+            if key not in payload:
+                continue
 
-            self.value[key].parent = self
+            values[key] = field.make_new(parent=self)
+            values[key].loads(payload[key])
 
-            print(key)
-
-            if key in payload:
-                self.value[key].loads(payload[key])
-
+        self.value = values
 
     def __str__(self):
         prefix = '\t' * self.total_parents
