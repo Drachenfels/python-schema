@@ -62,6 +62,26 @@ class SchemaField(BaseField):
         return super().get_configuration_attributes() + [
             'exception_on_unknown', 'required']
 
+    def get_required_fields(self):
+        ancestor_required = []
+
+        for ancestor in self.__class__.mro()[1:-1]:
+            _required = getattr(ancestor, 'required', None)
+
+            required = _required if _required else []
+
+            for name in required:  # NOQA
+                ancestor_required.append(name)
+
+        my_required = self.required
+
+        all_required = []
+
+        for name in my_required:
+            all_required.append(name)
+
+        return all_required + ancestor_required
+
     def validate_required_fields(self, payload):
         if not self.required:
             return
@@ -108,10 +128,9 @@ class SchemaField(BaseField):
         all_fields = {}
 
         for ancestor in self.__class__.mro()[:-1]:
-            fields = getattr(ancestor, 'fields', None)
+            _fields = getattr(ancestor, 'fields', None)
 
-            if not fields:
-                continue
+            fields = _fields if _fields else []
 
             for field in fields:  # NOQA
                 if isinstance(field, type):
